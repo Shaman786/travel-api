@@ -1,0 +1,77 @@
+services:
+  # 1. Primary Database (PostgreSQL)
+  postgres:
+    image: postgres:16-alpine
+    container_name: travel_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: travel_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - travel_net
+
+  # 2. Database GUI (PgAdmin) - Access at http://localhost:5050
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: travel_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - travel_net
+
+  # 3. Caching & Queues (Redis) - Essential for high performance
+  redis:
+    image: redis:alpine
+    container_name: travel_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - travel_net
+
+  # 4. Object Storage (MinIO) - Local version of S3/R2 for Images
+  # Access Console at http://localhost:9001
+  minio:
+    image: minio/minio
+    container_name: travel_minio
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - travel_net
+
+  # 5. Email Testing (Mailpit) - Catches emails sent by your app
+  # Access Inbox at http://localhost:8025
+  mailpit:
+    image: axllent/mailpit
+    container_name: travel_mail
+    ports:
+      - "1025:1025" # SMTP Port (Use this in your code)
+      - "8025:8025" # UI Port (View emails here)
+    networks:
+      - travel_net
+
+networks:
+  travel_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
